@@ -1,8 +1,10 @@
 import {useRef, useState} from 'react';
 import {
+  Alert,
   SafeAreaView,
   StatusBar,
   StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
   View,
@@ -14,20 +16,53 @@ import DraggableFlatList, {
   ScaleDecorator,
 } from 'react-native-draggable-flatlist';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+
+type ItemProps = {
+  id: number;
+  title: string;
+};
 
 export default function App() {
   const ref = useRef(null);
+  const [itemTitle, setItemTitle] = useState('');
+  const [items, setItems] = useState<Array<ItemProps>>([]);
 
-  const [items, setItems] = useState([
-    {id: 1, title: 'Arroz'},
-    {id: 2, title: 'Refri'},
-    {id: 3, title: 'Queijo'},
-    {id: 4, title: 'Brócolis'},
-  ]);
+  function addItem() {
+    if (items.length !== 0) {
+      setItems(listItems => [
+        ...listItems,
+        {id: items[items.length - 1].id + 1, title: itemTitle},
+      ]);
+    } else {
+      setItems(listItems => [...listItems, {id: 0, title: itemTitle}]);
+    }
 
-  function addItem() {}
+    setItemTitle('');
+    console.log(items);
+  }
 
-  function removeItem() {}
+  function checkClearList() {
+    Alert.alert('Esvaziar lista', 'Tem certeza que quer esvaziar a lista?', [
+      {
+        text: 'Não',
+        style: 'cancel',
+      },
+      {
+        text: 'Sim',
+        onPress: () => clearList(),
+      },
+    ]);
+  }
+
+  function clearList() {
+    setItems([]);
+  }
+
+  function removeItem(id: number) {
+    let filteredList = items.filter(allItems => allItems.id !== id);
+    setItems(filteredList);
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -36,31 +71,53 @@ export default function App() {
         <TextInput
           placeholder="Adicionar item"
           placeholderTextColor="#949494"
+          value={itemTitle}
+          onChangeText={e => setItemTitle(e)}
           style={styles.input}
         />
 
-        <TouchableOpacity style={styles.addButton}>
+        <TouchableOpacity onPress={addItem} style={styles.addButton}>
           <Ionicons name="send" size={25} color="#fff" />
         </TouchableOpacity>
       </View>
 
       <View style={styles.itemsContent}>
-        <GestureHandlerRootView>
-          <DraggableFlatList
-            data={items}
-            ref={ref}
-            keyExtractor={item => String(item.id)}
-            onDragEnd={({data}) => setItems(data)}
-            renderItem={({item, drag}) => (
-              <ScaleDecorator>
-                <OpacityDecorator activeOpacity={0.5}>
-                  <Item data={item} first={items[0].id} drag={drag} />
-                </OpacityDecorator>
-              </ScaleDecorator>
-            )}
-          />
-        </GestureHandlerRootView>
+        {items.length === 0 ? (
+          <Text style={styles.emptyList}>Nenhum item na lista</Text>
+        ) : (
+          <GestureHandlerRootView>
+            <DraggableFlatList
+              data={items}
+              ref={ref}
+              keyExtractor={item => String(item.id)}
+              onDragEnd={({data}) => setItems(data)}
+              renderItem={({item, drag}) => (
+                <ScaleDecorator>
+                  <OpacityDecorator activeOpacity={0.5}>
+                    <Item
+                      data={item}
+                      first={items[0].id}
+                      drag={drag}
+                      remove={() => removeItem(item.id)}
+                    />
+                  </OpacityDecorator>
+                </ScaleDecorator>
+              )}
+            />
+          </GestureHandlerRootView>
+        )}
       </View>
+
+      <TouchableOpacity
+        onPress={checkClearList}
+        disabled={items.length === 0 ? true : false}
+        style={styles.clearButton}>
+        <MaterialCommunityIcons
+          name="checkbox-multiple-marked-outline"
+          size={28}
+          color="#fff"
+        />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -80,6 +137,7 @@ const styles = StyleSheet.create({
   input: {
     width: '78%',
     height: 55,
+    color: '#222',
     backgroundColor: '#ddd',
     borderRadius: 8,
     paddingHorizontal: 15,
@@ -100,5 +158,21 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 15,
     borderTopRightRadius: 15,
     paddingTop: 25,
+  },
+  emptyList: {
+    fontSize: 18,
+    textAlign: 'center',
+    marginTop: 20,
+  },
+  clearButton: {
+    width: 55,
+    height: 55,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#3867DF',
+    borderRadius: 8,
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
   },
 });
