@@ -1,5 +1,6 @@
-import {useRef, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {
+  ActivityIndicator,
   Alert,
   SafeAreaView,
   StatusBar,
@@ -10,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Item from './src/components/Item';
 import DraggableFlatList, {
   OpacityDecorator,
@@ -27,19 +29,32 @@ export default function App() {
   const ref = useRef(null);
   const [itemTitle, setItemTitle] = useState('');
   const [items, setItems] = useState<Array<ItemProps>>([]);
+  const [loading, setLoading] = useState(true);
 
-  function addItem() {
-    if (items.length !== 0) {
-      setItems(listItems => [
-        ...listItems,
-        {id: items[items.length - 1].id + 1, title: itemTitle},
-      ]);
-    } else {
-      setItems(listItems => [...listItems, {id: 0, title: itemTitle}]);
+  useEffect(() => {
+    async function loadStorage() {
+      const storageData = await AsyncStorage.getItem('list_items');
+
+      if (storageData) {
+        setItems(JSON.parse(storageData));
+        setLoading(false);
+      }
+
+      setLoading(false);
     }
 
+    loadStorage();
+  }, []);
+
+  function addItem() {
+    let data = {
+      id: items.length !== 0 ? items[items.length - 1].id + 1 : 0,
+      title: itemTitle,
+    };
+
+    setItems(listItems => [...listItems, data]);
+    saveStorage([...items, data]);
     setItemTitle('');
-    console.log(items);
   }
 
   function checkClearList() {
@@ -55,13 +70,19 @@ export default function App() {
     ]);
   }
 
-  function clearList() {
+  async function clearList() {
     setItems([]);
+    await AsyncStorage.clear();
   }
 
   function removeItem(id: number) {
     let filteredList = items.filter(allItems => allItems.id !== id);
     setItems(filteredList);
+    saveStorage(filteredList);
+  }
+
+  async function saveStorage(data: Array<ItemProps>) {
+    await AsyncStorage.setItem('list_items', JSON.stringify(data));
   }
 
   return (
@@ -76,35 +97,51 @@ export default function App() {
           style={styles.input}
         />
 
-        <TouchableOpacity onPress={addItem} style={styles.addButton}>
+        <TouchableOpacity
+          onPress={addItem}
+          disabled={itemTitle === '' ? true : false}
+          style={styles.addButton}>
           <Ionicons name="send" size={25} color="#fff" />
         </TouchableOpacity>
       </View>
 
       <View style={styles.itemsContent}>
-        {items.length === 0 ? (
-          <Text style={styles.emptyList}>Nenhum item na lista</Text>
+        {loading ? (
+          <View
+            style={{
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingTop: 90,
+            }}>
+            <ActivityIndicator size={60} color="#ddd" />
+          </View>
         ) : (
-          <GestureHandlerRootView>
-            <DraggableFlatList
-              data={items}
-              ref={ref}
-              keyExtractor={item => String(item.id)}
-              onDragEnd={({data}) => setItems(data)}
-              renderItem={({item, drag}) => (
-                <ScaleDecorator>
-                  <OpacityDecorator activeOpacity={0.5}>
-                    <Item
-                      data={item}
-                      first={items[0].id}
-                      drag={drag}
-                      remove={() => removeItem(item.id)}
-                    />
-                  </OpacityDecorator>
-                </ScaleDecorator>
-              )}
-            />
-          </GestureHandlerRootView>
+          <>
+            {items.length === 0 ? (
+              <Text style={styles.emptyList}>Nenhum item na lista</Text>
+            ) : (
+              <GestureHandlerRootView>
+                <DraggableFlatList
+                  data={items}
+                  ref={ref}
+                  keyExtractor={item => String(item.id)}
+                  onDragEnd={({data}) => setItems(data)}
+                  renderItem={({item, drag}) => (
+                    <ScaleDecorator>
+                      <OpacityDecorator activeOpacity={0.5}>
+                        <Item
+                          data={item}
+                          first={items[0].id}
+                          drag={drag}
+                          remove={() => removeItem(item.id)}
+                        />
+                      </OpacityDecorator>
+                    </ScaleDecorator>
+                  )}
+                />
+              </GestureHandlerRootView>
+            )}
+          </>
         )}
       </View>
 
@@ -160,7 +197,7 @@ const styles = StyleSheet.create({
     paddingTop: 25,
   },
   emptyList: {
-    fontSize: 18,
+    fontSize: 16,
     textAlign: 'center',
     marginTop: 20,
   },

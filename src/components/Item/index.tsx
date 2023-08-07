@@ -1,7 +1,6 @@
 import {useRef, useState} from 'react';
 import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 
 type ItemProps = {
   id: number;
@@ -23,7 +22,7 @@ export default function Item({data, first, drag, remove}: CardData) {
 
     Animated.timing(animation, {
       toValue: 1,
-      duration: 600,
+      duration: 700,
       useNativeDriver: true,
     }).start(() => {
       remove(data.id);
@@ -51,11 +50,13 @@ export default function Item({data, first, drag, remove}: CardData) {
           <MaterialCommunityIcons name="drag-vertical" size={25} color="#fff" />
           <Text style={styles.title}>{data.title}</Text>
         </View>
-        <TouchableOpacity onPress={checkItem} style={styles.box}>
-          {itemChecked && (
-            <Ionicons name="checkmark-outline" size={15} color="#222" />
-          )}
-        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={checkItem}
+          style={[
+            styles.box,
+            {backgroundColor: itemChecked ? '#adffa5' : '#ddd'},
+          ]}
+        />
       </Animated.View>
     </TouchableOpacity>
   );
@@ -87,9 +88,6 @@ const styles = StyleSheet.create({
   box: {
     width: 18,
     height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ddd',
     borderRadius: 2,
   },
 });
